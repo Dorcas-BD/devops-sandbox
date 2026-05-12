@@ -136,3 +136,75 @@ Environments are automatically destroyed when their TTL expires. The cleanup dae
 - The health poller and cleanup daemon run as background processes — use `make down` to stop them cleanly.
 - Log shipping uses Approach A (simple): `docker logs -f` piped to file. No log aggregator.
 - API server uses Flask dev server — not production-grade.s
+
+
+
+
+## Full Demo
+
+### 1. Start the platform
+```bash
+make up
+```
+Starts Nginx container, cleanup daemon, health poller, and API server on port 5000.
+
+---
+
+### 2. Create an environment
+```bash
+make create
+```
+Enter a name and TTL when prompted. The script prints the ENV_ID and URL on completion.
+
+---
+
+### 3. Hit the app
+```bash
+curl http://localhost:<PORT>
+curl http://localhost:<PORT>/health
+```
+Both return JSON responses from the demo app running inside the environment.
+
+---
+
+### 4. Check the API
+```bash
+curl http://localhost:5000/envs
+```
+Returns all active environments with TTL remaining.
+
+---
+
+### 5. Simulate an outage
+```bash
+make simulate ENV=env-xxx MODE=pause
+curl http://localhost:<PORT>/health
+```
+Request hangs — container is frozen. Then recover:
+```bash
+make simulate ENV=env-xxx MODE=recover
+curl http://localhost:<PORT>/health
+```
+App responds normally again.
+
+---
+
+### 6. Check logs
+```bash
+make logs ENV=env-xxx
+```
+Streams the last lines of the environment's app log.
+
+---
+
+### 7. Destroy the environment
+```bash
+make destroy ENV=env-xxx
+curl http://localhost:<PORT>/health
+```
+Curl fails — container, network, and nginx config are all gone.
+
+---
+
+### 8. Auto-destroy
+Environments are automatically destroyed when their TTL expires. The cleanup daemon checks every 60 seconds and calls `destroy_env.sh` on any expired environment.
